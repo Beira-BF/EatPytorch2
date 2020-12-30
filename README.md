@@ -79,34 +79,35 @@
 
 当然，本书也非常适合作为Pytorch的工具手册在工程落地时作为范例库参考。
 
-日期|学习内容|内容难度|预计学习时间|更新状态
---|--:|---:|--:|--:|--:
-|一、Pytorch的建模流程|⭐️|0hour|✅
-day1|1-1,结构化数据建模流程范例|⭐️⭐️⭐️|1hour|✅
-day2|1-2,图片数据建模流程范例|⭐️⭐️⭐️⭐️|2hour|✅
-day3|1-3,文本数据建模流程范例|⭐️⭐️⭐️⭐️⭐️|2hour|✅
-day4|1-4,时间序列数据建模流程范例|⭐️⭐️⭐️⭐️⭐️|2hour|✅
- |二、Pytorch的核心概念|⭐️|0hour|✅
-day5|2-1,张量数据结构|⭐️⭐️⭐️⭐️|1hour|✅
-day6|2-2,自动微分机制|⭐️⭐️⭐️|1hour|✅
-day7|2-3,动态计算图|⭐️⭐️⭐️⭐️⭐️|2hour|✅
- |三、Pytorch的层次结构|⭐️|0hour|✅
-day8|3-1,低阶API示范|⭐️⭐️⭐️⭐️|1hour|✅
-day9|3-2,中阶API示范|⭐️⭐️⭐️|1hour|✅
-day10|3-3,高阶API示范|⭐️⭐️⭐️|1hour|✅
- |四、Pytorch的低阶API|⭐️|0hour|✅
-day11|4-1,张量的结构操作|⭐️⭐️⭐️⭐️⭐️|2hour|✅
-day12|4-2,张量的数学运算|⭐️⭐️⭐️⭐️|1hour|✅
-day13|4-3,nn.functional和nn.Module|⭐️⭐️⭐️⭐️|1hour|✅
- |五、Pytorch的中阶API|⭐️|0hour|✅
-day14|5-1,Dataset和DataLoader|⭐️⭐️⭐️⭐️⭐️|2hour|✅
-day15|5-2,模型层|⭐️⭐️⭐️|1hour|✅
-day16|5-3,损失函数|⭐️⭐️⭐️|1hour|✅
-day17|5-4,TensorBoard可视化|⭐️⭐️⭐️|1hour|✅
- |六、Pytorch的高阶API|⭐️|0hour|✅
-day18|6-1,构建模型的3种方法|⭐️⭐️⭐️⭐️|1hour|✅
-day19|6-2,训练模型的3种方法|⭐️⭐️⭐️⭐️|1hour|✅
-day20|6-3,使用GPU训练模型|⭐️⭐️⭐️⭐️|1hour|✅
+
+| 日期 | 学习内容 | 内容难度 | 预计学习时间|更新状态|
+| ----| :--------| -------:| ----------:| -----:|
+|  |一、Pytorch的建模流程| ⭐️ | 0hour| ✅|
+| day1| 1-1,结构化数据建模流程范例|⭐️⭐️⭐️|1hour|✅|
+| day2| 1-2,图片数据建模流程范例|⭐️⭐️⭐️⭐️|2hour|✅|
+| day3| 1-3,文本数据建模流程范例|⭐️⭐️⭐️⭐️⭐️|2hour|✅|
+| day4| 1-4,时间序列数据建模流程范例|⭐️⭐️⭐️⭐️⭐️|2hour|✅|
+| |二、Pytorch的核心概念|⭐️|0hour|✅|
+|day5|2-1,张量数据结构|⭐️⭐️⭐️⭐️|1hour|✅|
+|day6|2-2,自动微分机制|⭐️⭐️⭐️|1hour|✅|
+| day7|2-3,动态计算图|⭐️⭐️⭐️⭐️⭐️|2hour|✅|
+| |三、Pytorch的层次结构|⭐️|0hour|✅|
+|day8|3-1,低阶API示范|⭐️⭐️⭐️⭐️|1hour|✅|
+|day9|3-2,中阶API示范|⭐️⭐️⭐️|1hour|✅|
+|day10|3-3,高阶API示范|⭐️⭐️⭐️|1hour|✅|
+| |四、Pytorch的低阶API|⭐️|0hour|✅|
+|day11|4-1,张量的结构操作|⭐️⭐️⭐️⭐️⭐️|2hour|✅|
+|day12|4-2,张量的数学运算|⭐️⭐️⭐️⭐️|1hour|✅|
+|day13|4-3,nn.functional和nn.Module|⭐️⭐️⭐️⭐️|1hour|✅|
+| |五、Pytorch的中阶API|⭐️|0hour|✅|
+|day14|5-1,Dataset和DataLoader|⭐️⭐️⭐️⭐️⭐️|2hour|✅|
+|day15|5-2,模型层|⭐️⭐️⭐️|1hour|✅|
+|day16|5-3,损失函数|⭐️⭐️⭐️|1hour|✅|
+|day17|5-4,TensorBoard可视化|⭐️⭐️⭐️|1hour|✅|
+| |六、Pytorch的高阶API|⭐️|0hour|✅|
+|day18|6-1,构建模型的3种方法|⭐️⭐️⭐️⭐️|1hour|✅|
+|day19|6-2,训练模型的3种方法|⭐️⭐️⭐️⭐️|1hour|✅|
+|day20|6-3,使用GPU训练模型|⭐️⭐️⭐️⭐️|1hour|✅|
 
 2，学习环境
 
@@ -114,26 +115,27 @@ day20|6-3,使用GPU训练模型|⭐️⭐️⭐️⭐️|1hour|✅
 
 为了直接能够在jupyter中打开markdown文件，建议安装jupytext，将markdown转换成ipynb文件。
 
-(```)
+```python
+#克隆本书源码到本地,使用码云镜像仓库国内下载速度更快
+#!git clone https://gitee.com/Python_Ai_Road/eat_pytorch_in_20_days
 
-    #克隆本书源码到本地,使用码云镜像仓库国内下载速度更快
-    #!git clone https://gitee.com/Python_Ai_Road/eat_pytorch_in_20_days
+#建议在jupyter notebook 上安装jupytext，以便能够将本书各章节markdown文件视作ipynb文件运行
+#!pip install -i https://pypi.tuna.tsinghua.edu.cn/simple -U jupytext
     
-    #建议在jupyter notebook 上安装jupytext，以便能够将本书各章节markdown文件视作ipynb文件运行
-    #!pip install -i https://pypi.tuna.tsinghua.edu.cn/simple -U jupytext
-        
-    #建议在jupyter notebook 上安装最新版本pytorch 测试本书中的代码
-    #!pip install -i https://pypi.tuna.tsinghua.edu.cn/simple  -U torch torchvision torchtext torchkeras 
+#建议在jupyter notebook 上安装最新版本pytorch 测试本书中的代码
+#!pip install -i https://pypi.tuna.tsinghua.edu.cn/simple  -U torch torchvision torchtext torchkeras 
 
-(```)
+```
 
-    import torch
-    from torch import nn
-    print("torch version:", torch.__version)
-    
-    a = torch.tensor([[2,1]])
-    b = torch.tensor([[-1,2]])
-    c = a@b.t()
-    print("[[2,1]]@[[-1],[2]] =", c.item())
-    
+```python
+import torch
+from torch import nn
+print("torch version:", torch.__version)
+
+a = torch.tensor([[2,1]])
+b = torch.tensor([[-1,2]])
+c = a@b.t()
+print("[[2,1]]@[[-1],[2]] =", c.item())
+```
+
     
