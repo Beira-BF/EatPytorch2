@@ -107,3 +107,118 @@ vector = torch.tensor([1.0, 2.0, 3.0, 4.0])
 print(vector,vector.dtype)
 print(vector.size())
 print(vector.shape)
+
+matrix = torch.tensor([[1.0, 2.0], [3.0, 4.0]])
+print(matrix, matrix.dtype)
+print(matrix.size())
+print(matrix.shape)
+
+# 使用view可以改变张量尺寸
+vector = torch.arange(0,12)
+print(vector, vector.dtype)
+print(vector.size())
+print(vector.shape)
+
+matrix34 = vector.view(3,4)
+print(matrix34,matrix34.dtype)
+print(matrix34.size())
+print(matrix34.shape)
+
+matrix43 = vector.view(4, -1) # -1b表示该位置长度由程序自动推断
+print(matrix43, matrix43.dtype)
+print(matrix43.size())
+print(matrix43.shape)
+
+# 有些操作会让张量存储结构扭曲，直接使用view会失败，可以用reshape方法
+matrix26 = torch.arange(0,12).view(2,6)
+print(matrix26, matrix26.dtype)
+print(matrix26.size())
+print(matrix26.shape)
+
+# 转置操作让张量存储结构扭曲
+matrix62 = matrix26.t()
+print(matrix62, matrix62.dtype)
+print(matrix62.size())
+print(matrix62.shape)
+print(matrix62.is_contiguous())
+
+# 直接使用view方法会失败，可以使用reshape方法
+# matrix34 = matrix62.view(3,4)
+# RuntimeError: view size is not compatible with input tensor's size and stride
+# (at least one dimension spans across two contiguous subspaces). Use .reshape(...) instead.
+matrix34 = matrix62.reshape(3,4) # 等价于matrix34 = matrix62.contiguous().view(3,4)
+print(matrix34)
+matrix34 = matrix62.contiguous().view(3,4)
+print(matrix34)
+
+# 四、张量和numpy数组
+# 可以用numpy 方法从Tensor得到numpy数组，也可以用torch.from)numpy从numpy数组得到Tensor。
+# 这两种方法关联的Tensor和numpy数组是共享数据内存的。
+# 如果改变其中一个，另外一个的值也会发生改变。
+# 如果有需要，可以用张量的clone方法拷贝张量，中断这种关联。
+# 此外，还可以使用item方法从标量张量得到对应的Python数值。
+# 使用tolist方法从张量得到对应的Python数值列表。
+
+import numpy as np
+import torch
+
+# torch.from_numpy函数从numpy数组得到Tensor
+
+arr = np.zeros(3)
+print("arr: ", arr)
+tensor = torch.from_numpy(arr)
+print("before add 1:")
+print(tensor)
+
+print("\nafter add 1:")
+np.add(arr, 1, out=arr) # 给arr增加1，tensor也随之改变
+print(arr)
+print(tensor)
+
+# numpy方法从Tensor得到numpy数组
+tensor = torch.zeros(3)
+arr = tensor.numpy()
+print("before add 1:")
+print(tensor)
+print(arr)
+
+print("\nafter add 1:")
+
+# 使用带下划线的方法表示计算结果会返回给调用张量
+tensor.add_(1) # 给tensor增加1， arr也随之改变
+# 或：torch.add(tensor, 1, out=tensor)
+print(tensor)
+print(arr)
+
+# 可以使用clone()方法拷贝张量，中断掉这种关系
+tensor = torch.zeros(3)
+# 使用clone方法拷贝张量，拷贝后的张量和原始张量内存独立
+arr = tensor.clone().numpy() # 也可以使用tensor.data.numpy()
+print("before add 1:")
+print(tensor)
+print(arr)
+
+print("\nafter add 1:")
+# 使用带下划线的方法表示计算结果会返回给调用张量
+tensor.add_(1) # 给tensor增加1，arr不再随之改变
+print(tensor)
+print(arr)
+
+# item方法和tolist方法可以将张量转换成Python数值和数值列表
+scalar = torch.tensor(1.0)
+print(scalar, scalar.dtype)
+s = scalar.item()
+print(s)
+print(type(s))
+
+tensor = torch.rand(2,2)
+print(tensor, tensor.dtype)
+t = tensor.tolist()
+print(t)
+print(type(t))
+
+# h = tensor.item()
+# ValueError: only one element tensors can be converted to Python scalars
+# print(h)
+# print(type(h))
+
