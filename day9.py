@@ -202,7 +202,7 @@ def train_step(model, features, labels):
     model.optimizer.step()
     model.optimizer.zero_grad()
 
-    return loss.item, metric.item()
+    return loss.item(), metric.item()
 
 # 测试train_step的效果
 features, labels = next(iter(dl))
