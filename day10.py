@@ -150,7 +150,7 @@ from torch import nn
 import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader, TensorDataset
 import torchkeras
-import pytorch_lighting as pl
+import pytorch_lightning as pl
 
 # 正负样本数量
 n_positive, n_negative = 2000, 2000
@@ -200,10 +200,36 @@ class Net(nn.Module):
         return y
 
 class Model(torchkeras.LightModel):
-
+    # loss, and optional metrics
     def shared_step(self,batch)->dict:
         x, y = batch
         prediction = self(x)
         loss = nn.BCELoss()(prediction, y)
         preds = torch.where(prediction>0.5, torch.ones_like(prediction), torch.zeros_like(prediction))
         acc = pl.metrics.functional.accuracy(preds,y)
+        dic = {"loss":loss, "acc":acc}
+        return dic
+    # optimizer and optional lr_scheduler
+    def configure_optimizers(self):
+        optimizer = torch.optim.Adam(self.parameters(), lr=1e-2)
+        lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.0001)
+        return {"optimizer":optimizer, "lr_scheduler":lr_scheduler}
+
+pl.seed_everything(1234)
+net = Net()
+model = Model(net)
+
+torchkeras.summary(model, input_shape=(2,))
+
+# 3, 训练模型
+
+ckpt_cb = pl.callbacks.ModelICheckpoint(moniter='val_loss')
+
+trainer = pl.Trainer(max_epochs=100, gpus=0, callbacks=[ckpt_cb])
+
+trainer.fit(model, dl_train, dl_valid)
+
+# 结果可视化
+fig, (ax1, ax2) = plt.subplots(nrows=1, ncols=2, figsize=(12,5))
+ax1.scatter(Xp[:,0], Xp[:,1], c="r")
+ax1.scatter(Xn[:,0], Xn[:,1], c="g")
