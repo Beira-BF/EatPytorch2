@@ -233,3 +233,49 @@ trainer.fit(model, dl_train, dl_valid)
 fig, (ax1, ax2) = plt.subplots(nrows=1, ncols=2, figsize=(12,5))
 ax1.scatter(Xp[:,0], Xp[:,1], c="r")
 ax1.scatter(Xn[:,0], Xn[:,1], c="g")
+ax1.legend(["positive", "negative"])
+ax1.set_title("y_true")
+
+Xp_pred = X[torch.squeeze(model.forward(X)>=0.5)]
+Xn_pred = X[torch.squeeze(model.forward(X)<0.5)]
+
+ax2.scatter(Xp_pred[:,0], Xp_pred[:,1], c="r")
+ax2.scatter(Xn_pred[:,0], Xn_pred[:,1], c="g")
+ax2.legend(["positive", "negative"])
+ax2.set_title("y_pred")
+
+# 4, 评估模型
+import pandas as pd
+history = model.history
+dfhistory = pd.DataFrame(history)
+dfhistory
+
+import matplotlib.pyplot as plt
+
+def plot_metric(dfhistory, metric):
+    train_metrics = dfhistory[metric]
+    val_metrics = dfhistory['val_'+metric]
+    epochs = range(1, len(train_metrics)+1)
+    plt.plot(epochs, train_metrics, 'bo--')
+    plt.plot(epochs, val_metrics, 'ro-')
+    plt.title('Training and validation '+metric)
+    plt.xlabel("Epochs")
+    plt.ylabel(metric)
+    plt.legend(["train_"+metric, 'val_'+metric])
+    plt.show()
+
+plot_metric(dfhistory, "loss")
+
+plot_metric(dfhistory, "acc")
+
+results = trainer.test(model, test_dataloader=dl_valid, verbose=False)
+print(results[0])
+
+# 5, 使用模型
+def predict(model, dl):
+    model.eval()
+    prediction = torch.cat([model.forward(t[0].to(model.device))for t in dl])
+    result = torch.where(prediction>0.5, torch.ones_like(prediction), torch.zeros_like(prediction))
+    return (result.data)
+
+result = predict(model, dl_valid)
