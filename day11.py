@@ -55,3 +55,153 @@ print(torch.rand([5]))
 b = torch.normal(mean=torch.zeros(3,3), std=torch.ones(3,3))
 print(b)
 
+# 正态分布随机
+mean, std = 2,5
+c = std*torch.randn((3,3))+mean
+print(c)
+
+# 整数随机排列
+d = torch.randperm(20)
+print(d)
+
+# 特殊矩阵
+I = torch.eye(3,3)  # 单位矩阵
+print(I)
+t = torch.diag(torch.tensor([1,2,3])) # 对角矩阵
+print(t)
+
+# 索引切片
+# 张量的索引切片方式和numpy几乎是一样的。切片时支持缺省参数和省略号。
+# 可以通过索引和切片对部分元素进行修改。
+# 此外，对于不规则的切片提取，可以使用torch.index_select, torch.masked_select, torch.take
+# 如果要通过修改张量的某些元素得到新的张量，可是使用torch.where, torch.masked_fill, torch.index_fill
+
+# 均匀随机分布
+torch.manual_seed(0)
+minval, maxval = 0, 10
+t = torch.floor(minval + (maxval-minval)*torch.rand([5,5])).int()
+print(t)
+
+# 第0行
+print(t[0])
+
+# 倒数第一行
+print(t[-1])
+
+# 第1行第3列
+print(t[1,3])
+print(t[1][3])
+
+# 第1行至第3行
+print(t[1:4,:])
+
+# 第1行至最后一行，第0列到最后一列每隔两列取一列
+print(t[1:4,:4:2])
+
+# 可以使用索引和切片修改部分元素
+x = torch.tensor([[1,2],[3,4]], dtype=torch.float32, requires_grad=True)
+x.data[1,:] =torch.tensor([0.0, 0.0])
+print(x)
+
+a = torch.arange(27).view(3,3,3)
+print(a)
+
+# 省略号可以表示多个冒号
+print(a[...,1])
+
+# 以上切片方式相对规则，对于不规则的切片提取，可以使用torch.index_select, torch.take, torch.gather, torch.masked_select.
+# 考虑班级成绩册的例子，有4个班级，每个班级10个学生，每个学生7门科目成绩。可以用一个4x10x7的张量来表示。
+minval = 0
+maxval = 100
+scores = torch.floor(minval + (maxval-minval)*torch.rand([4,10,7])).int()
+print(scores)
+
+# 抽取每个班级第0个学生，第5个学生，第9个学生的全部成绩
+torch.index_select(scores, dim=1, index=torch.tensor([0,5,9]))
+
+# 抽取每个班级第0个学生，第5个学生，第9个学生的第1门课程，第3门课程，第6门课程成绩
+q = torch.index_select(torch.index_select(scores, dim=1, index=torch.tensor([0,5,9])),
+                       dim=2, index=torch.tensor([1,3,6]))
+print(q)
+
+# 抽取第0个班级第0个学生的第0门课程，第2个班级的第4个学生的第1门课程，第3个班级的第9个学生第6门课程成绩
+# take将输入堪称一维数组，输出和index同形状
+s = torch.take(scores, torch.tensor([0*10*7+0, 2*10*7+4*7+1, 3*10*7+9*7+6]))
+print(s)
+
+# 抽取分数大于等于80的分数（布尔索引）
+# 结果是1维张量
+g = torch.masked_select(scores, scores>=80)
+print(g)
+
+# 以上这些方法仅能提取张量的部分元素值，但不能更改张量的部分元素值得到新的张量。
+# 如果要通过修改张量的部分元素值得到新的张量，可以使用torch.where, torch.index_fill和torch.masked_fill
+# torch.where 可以理解为if的张量版本
+# torch.index_fill的选取元素逻辑和torch.index_select相同。
+# torch.masked_fill的选取元素逻辑和torch.masked_select相同。
+
+# 如果分数大于60分，赋值成1，否则赋值成0
+ifpass = torch.where(scores>60, torch.tensor(1), torch.tensor(0))
+print(ifpass)
+
+# 将每个班级第0个学生，第5个学生，第9个学生的全部成绩赋值成满分
+torch.index_fill(scores, dim=1, index=torch.tensor([0,5,9]), value=100)
+# 等价于scores.index_fill(dim=1, index=torch.tensor([0,5,9]),value=100)
+
+# 将分数小于60分的分数赋值成60分
+b = torch.masked_fill(scores, scores<60, 60)
+# 等价于b=scores.masked_fill(scores<60, 60)
+print(b)
+
+# 三、维度变换
+# 维度变换相关函数主要有torch.reshape(或者调用张量的view方法), torch.squeeze, torch.unsqueeze, torch.transpose
+# torch.reshape 可以改变张量的形状。
+# torch.squeeze可以减少维度。
+# torch.unsqueeze可以增加维度。
+# torch.transpose可以交换维度。
+
+# 张量的view方法有时候会调用失败，可以使用reshape方法。
+
+torch.manual_seed(0)
+minval, maxval = 0, 255
+a = (minval + (maxval-minval)*torch.rand([1,3,3,2])).int()
+print(a.shape)
+print(a)
+
+# 改成（3，6）形状的张量
+b = a.view([3,6]) # torch.reshape(a, [3,6])
+print(b.shape)
+print(b)
+
+# 改回成[1,3,3,2]形状的张量
+c = torch.reshape(b, [1,3,3,2]) # b.view([1,3,3,2])
+print(c)
+
+# 如果张量在某个维度上只有一个元素，利用torch.squeeze可以消除这个维度
+# torch.unsqueeze的作用和torch.squeeze的作用相反
+
+a = torch.tensor([[1.0, 2.0]])
+s = torch.squeeze(a)
+print(a)
+print(s)
+print(a.shape)
+print(s.shape)
+
+# 在第0维插入一个长度为1的一个维度
+
+d = torch.unsqueeze(s, axis=0)
+print(s)
+print(d)
+
+print(s.shape)
+print(d.shape)
+
+# torch.transpose可以交换张量的维度，torch.transpose常用于图片存储格式的变换上。
+# 如果是二维的矩阵，通常会调用矩阵的转置方法matrix.t(), 等价于torch.transpose(matrix, 0, 1).
+
+minval = 0
+maxval = 255
+# Batch, Height, Width, Channel
+data = torch.floor(minval + (maxval-minval)*torch.rand([100, 256, 256, 4])).int()
+print(data.shape)
+
