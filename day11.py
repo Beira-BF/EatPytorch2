@@ -205,3 +205,45 @@ maxval = 255
 data = torch.floor(minval + (maxval-minval)*torch.rand([100, 256, 256, 4])).int()
 print(data.shape)
 
+# 转换成Pytorch默认的图片格式Batch, Channel, Height, Width
+# 需要交换两次
+data_t = torch.transpose(torch.transpose(data,1,2), 1,3)
+print(data_t.shape)
+
+matrix = torch.tensor([[1,2,3], [4,5,6]])
+print(matrix)
+print(matrix.t()) # 等价于torch.transpose(matrix, 0, 1)
+
+# 四、合并分割
+# 可以用torch.cat方法和torch.stack方法将多个张量合并，可以用torch.split方法把一个张量分割成多个张量。
+# torch.cat和torch.stack有略微的区别，torch.cat是连接，不会增加维度，而torch.stack是堆叠，会增加维度。
+a = torch.tensor([[1.0, 2.0], [3.0, 4.0]])
+b = torch.tensor([[5.0, 6.0],[7.0, 8.0]])
+c = torch.tensor([[9.0, 10.0][11.0, 12.0]])
+
+abc_cat = torch.cat([a,b,c], dim=0)
+print(abc_cat.shape)
+print(abc_cat)
+
+abc_stack = torch.stack([a,b,c], axis=0)  # torch中dim和axis参数名可以混用
+print(abc_stack.shape)
+print(abc_stack)
+
+print(torch.cat([a,b,c],axis=1))
+
+print(torch.stack([a,b,c], axis=1))
+
+# torch.split是torch.cat的逆运算，可以指定分割份数平均分割，也可以通过指定每份的记录数量进行分割。
+
+print(abc_cat)
+a,b,c = torch.split(abc_cat,split_size_or_sections=2, dim=0) # 每份2个进行分割
+print(a)
+print(b)
+print(c)
+
+print(abc_cat)
+p,q,r = torch.split(abc_cat, split_size_or_sections=[4,1,1],dim=0) # 每份分别为[4,1,1]
+print(p)
+print(q)
+print(r)
+
