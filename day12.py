@@ -66,3 +66,39 @@ z = torch.clamp(x, max=1)
 print(y)
 print(z)
 
+# 二、向量运算
+# 向量运算符只在一个特定轴上运算，将一个向量映射到一个标量或者另外一个向量。
+
+# 统计值
+a = torch.arange(1,10).float()
+print(torch.sum(a))
+print(torch.mean(a))
+print(torch.max(a))
+print(torch.min(a))
+print(torch.prod(a))
+print(torch.std(a)) # 累乘
+print(torch.var(a))  # 标准差
+print(torch.median(a)) # 中位数
+
+# 指定维度计算统计值
+b = a.view(3,3)
+print(b)
+print(torch.max(b, dim=0))
+print(torch.max(b, dim=1))
+
+# cum扫描
+a = torch.arange(1, 10)
+
+print(torch.cumsum(a,0))
+print(torch.cumprod(a,0))
+print(torch.cummax(a,0).values)
+print(torch.cummax(a,0).indices)
+print(torch.cummin(a,0))
+
+
+# torch.sort和torch.topk可以对张量排序
+a = torch.tensor([[9,7,8],[1,3,2],[5,6,4]]).float()
+print(torch.topk(a,2,dim=0),"\n")
+print(torch.topk(a,2,dim=1),"\n")
+print(torch.sort(a,dim=1),"\n")
+
