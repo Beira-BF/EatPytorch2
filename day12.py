@@ -102,3 +102,83 @@ print(torch.topk(a,2,dim=0),"\n")
 print(torch.topk(a,2,dim=1),"\n")
 print(torch.sort(a,dim=1),"\n")
 
+# 利用torch.topk可以在Pytorch中实现KNN算法
+
+# 三、矩阵运算
+# 矩阵必须是二维的，类似torch.tensor([1,2,3])这样的不是矩阵。
+# 矩阵运算包括：矩阵乘法，矩阵专职，矩阵逆，矩阵范数，矩阵行列式，矩阵求特征值，矩阵分解等运算。
+
+# 矩阵乘法
+a = torch.tensor([[1,2],[3,4]])
+b = torch.tensor([[2,0],[0,2]])
+print(a@b)  # 等价于torch.matmul(a,b) 或 torch.mm(a,b)
+
+# 矩阵转置
+a = torch.tensor([[1.0, 2], [3, 4]])
+print(a.t())
+
+# 矩阵逆，必须为浮点类型
+a = torch.tensor([[1.0,2],[3,4]])
+print(torch.inverse(a))
+
+# 矩阵求trace
+a = torch.tensor([[1.0, 2], [3, 4]])
+print(torch.trace(a))
+
+# 矩阵求范数
+a = torch.tensor([[1.0, 2], [3, 4]])
+print(torch.norm(a))
+
+# 矩阵行列式
+a = torch.tensor([[1.0, 2], [3, 4]])
+print(torch.det(a))
+
+# 矩阵特征值和特征向量
+a = torch.tensor([[1.0, 2], [-5, 4]], dtype=torch.float)
+print(torch.eig(a, eigenvectors=True))
+
+# 两个特征值分别是-2。5+2。7839j， 2。5-2。7839j
+
+# 矩阵QR分解，将一个方阵分解为一个正交矩阵q和上三角矩阵r
+# QR分解实际上是对矩阵a实施Schmidt正交化得到q
+
+a = torch.tensor([[1.0, 2.0], [3.0, 4.0]])
+q,r = torch.qr(a)
+print(q, "\n")
+print(r, "\n")
+print(q@r)
+
+# 矩阵svd分解
+# svd分解可以将任意一个矩阵分解为一个正交矩阵u，一个对角矩阵s和一个正交矩阵v.t()的乘积
+# svd常用于矩阵压缩和降维
+a = torch.tensor([[1.0, 2.0], [3.0, 4.0,], [5.0, 6.0]])
+
+u, s, v = torch.svd(a)
+
+print(u, "\n")
+print(s, "\n")
+print(v, "\n")
+
+print(u@torch.diag(s)@v.t())
+
+# 利用svd分解可以在Pytorch中实现主成分分析降维
+
+# 四，广播机制
+# Pytorch的广播规则和numpy是一样的：
+
+# 1，如果张量的纬度不同，将纬度较小的张量进行扩展，直到两个张量的纬度都一样。
+# 2，如果两个张量在某个纬度上的长度是相同的，或者其中一个张量在该纬度上的长度为1，那么我们就说这两个张量在该纬度上是相容的。
+# 3，如果两个张量在所有纬度上都是相容的，它们就能使用广播。
+# 4，广播之后，每个纬度的长度将取两个张量在该纬度长度的较大值。
+# 5，在任何一个纬度上，如果一个张量的长度为1，另一个张量长度大于1，那么在该纬度上，就好像是对第一个张量进行了复制。
+
+# torch.broadcast_tensors可以将多个张量根据广播规则转换成相同的纬度。
+
+a = torch.tensor([1,2,3])
+b = torch.tensor([[0,0,0], [1,1,1], [2,2,2]])
+print(b+a)
+
+a_broad, b_broad = torch.broadcast_tensors(a,b)
+print(a_broad, "\n")
+print(b_broad, "\n")
+print(a_broad + b_broad)
