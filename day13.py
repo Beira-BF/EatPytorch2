@@ -107,3 +107,69 @@ class Linear(nn.Module):
     def forward(self, input):
         return F.linear(input, self.weight, self.bias)
 
+# 三、使用nn.Module来管理子模块
+# 一般情况下，我们都很少直接使用nn.Parameter来定义参数构建模型，而是通过一些拼装一个常用的模型层来构造模型。
+# 这些模型层也是继承自nn.Module的对象，本身也包括参数，属于我们要定义的模块的子模块。
+# nn.Module提供了一些方法可以管理这些子模块。
+# children()方法：返回生成器，包括模块下的所有子模块
+# named_children()方法：返回一个生成器，包括模块下的所有子模块，以及它们的名字。
+# modules()方法：返回一个生成器，包括模块下的所有各个层级的模块，包括模块本身。
+# named_modules()方法：返回一个生成器，包括模块下的所有各个层级的模块以及它们的名字，包括模块本身。
+# 其中children()方法和named_children()方法较多使用。
+# modules()方法和named_modules()方法较少使用，其功能可以通过多个named_children()的嵌套使用实现。
+
+class Net(nn.Module):
+
+    def __init__(self):
+        super(Net, self).__init__()
+
+        self.embedding = nn.Embedding(num_embeddings=10000, embedding_dim=3, padding_idx=1)
+        self.conv = nn.Sequential()
+        self.conv.add_module("conv_1", nn.Conv1d(in_channels=3, out_channels=16, kernel_size=5))
+        self.conv.add_module("pool_1", nn.MaxPool1d(kernel_size=2))
+        self.conv.add_module("relu_1", nn.ReLU())
+        self.conv.add_module("conv_2", nn.Conv1d(in_channels=16, out_channels=128, kernel_size=2))
+        self.conv.add_module("pool_2", nn.MaxPool1d(kernel_size=2))
+        self.conv.add_module("relu_2", nn.ReLU())
+
+        self.dense = nn.Sequential()
+        self.dense.add_module("flatten", nn.Flatten())
+        self.dense.add_module("linear", nn.Linear(6144, 1))
+        self.dense.add_module("sigmoid", nn.Sigmoid())
+
+    def forward(self, x):
+        x = self.embedding(x).transpose(1,2)
+        x = self.conv(x)
+        y = self.dense(x)
+        return y
+
+net = Net()
+
+i = 0
+for child in net.children():
+    i+=1
+    print(child, "\n")
+
+print("child number", i)
+
+i = 0
+for module in net.modules():
+    i+=1
+    print(module)
+print("module number:", i)
+
+# 下面我们通过named_children方法找到embedding层，并将其参数设置为不可训练（相当于冻结embedding层）。
+children_dict = {name:module for name, module in net.named_children()}
+
+print(children_dict)
+embedding = children_dict["embedding"]
+embedding.requires_grad_(False) # 冻结其参数
+
+# 可以看到其第一层的参数已经不可以被训练了。
+for param in embedding.parameters():
+    print(param.requires_grad)
+    print(param.numel())
+
+from torchkeras import summary
+summary(net, input_shape=(200,), input_dtype=torch.LongTensor)
+# 不可训练参数数量增加
