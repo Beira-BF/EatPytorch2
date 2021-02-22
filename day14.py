@@ -31,3 +31,11 @@
 # labels = torch.stack([Y[1], Y[4], Y[8], Y[9]])
 
 # 2, Dataset和DataLoader的功能分工
+# 上述第1个步骤确定数据集的长度是由Dataset的__len__方法实现的。
+# 第2个步骤从0到n-1的范围中抽样出m个数的方法是由DataLoader的sampleer和batch_sampler参数指定的。
+# sampler参数指定单个元素抽样方法，一般无需用户设置，程序默认在DataLoader的参数shuffle=True时采用随机抽样，shuffle=False时采用顺序抽样。
+# batch_sampler参数将多个抽样的元素整理成一个列表，一般无需用户设置，默认方法在DataLoader的参数drop_last=True时会丢弃数据集最后一个长度不能
+# 被batch大小整除的批次，在drop_last=False时保留最后一个批次。
+# 第3个步骤的核心逻辑根据下标取数据集中的元素，是由Dataset的__getitem__方法实现的。
+# 第4个步骤的逻辑由DataLoader的参数cooate_fn指定。一般情况下也无需用户设置。
+
