@@ -37,5 +37,36 @@
 # batch_sampler参数将多个抽样的元素整理成一个列表，一般无需用户设置，默认方法在DataLoader的参数drop_last=True时会丢弃数据集最后一个长度不能
 # 被batch大小整除的批次，在drop_last=False时保留最后一个批次。
 # 第3个步骤的核心逻辑根据下标取数据集中的元素，是由Dataset的__getitem__方法实现的。
-# 第4个步骤的逻辑由DataLoader的参数cooate_fn指定。一般情况下也无需用户设置。
+# 第4个步骤的逻辑由DataLoader的参数collate_fn指定。一般情况下也无需用户设置。
+
+# 3, Dataset和DataLoader的主要接口
+# 以下是Dataset和DataLoader的核心接口逻辑伪代码，不完全和源码一致。
+
+import torch
+class Dataset(object):
+    def __init__(self):
+        pass
+
+    def __len__(self):
+        raise NotImplementedError
+
+    def __getitem__(self, item):
+        raise NotImplementedError
+
+
+class DataLoader(object):
+    def __init__(self, dataset, batch_size, collate_fn, shuffle=True, drop_last=False):
+        self.dataset = dataset
+        self.sampler = torch.utils.data.RandomSampler if shuffle else \
+            torch.utils.data.SequentialSampler
+        self.batch_sampler = torch.utils.data.BatchSampler
+        self.sample_iter = self.batch_sampler(
+            self.sampler(range(len(dataset))),
+            batch_size = batch_size, drop_last=drop_last
+        )
+
+    def __next__(self):
+        indices = next(self.sample_iter)
+        batch = self.collate_fn([self.dataset[i] for i in indices])
+        return batch
 
