@@ -70,3 +70,97 @@ class DataLoader(object):
         batch = self.collate_fn([self.dataset[i] for i in indices])
         return batch
 
+# 二、使用Dataset创建数据集
+# Dataset创建数据集常用的方法有：
+# 使用torch.utils.data.TensorDataset根据Tensor创建数据集(numpy的array，Pandas的DataFrame需要先转换成Tensor）。
+# 使用torchvision.datasets.ImageFolder根据图片目录创建图片数据集。
+# 继承torch.utils.data.Dataset创建自定义数据集。
+# 此外，还可以通过
+# torch.utils.data.random_split将一个数据集分割成多份，常用于分割训练集，验证集和测试集。
+# 调用Dataset的加法运算符（+）将多个数据集合并成一个数据集。
+
+# 1，根据Tensor创建数据集
+
+import numpy as np
+import torch
+from torch.utils.data import TensorDataset, Dataset, DataLoader, random_split
+
+# 根据Tensor创建数据集
+from sklearn import datasets
+iris = datasets.load_iris()
+ds_iris = TensorDataset(torch.tensor(iris.data), torch.tensor(iris.target))
+
+# 分割成训练集和预测集
+n_train = int(len(ds_iris)*0.8)
+n_valid = len(ds_iris) - n_train
+ds_train, ds_valid = random_split(ds_iris, [n_train, n_valid])
+
+print(type(ds_iris))
+print(type(ds_train))
+
+# 使用DataLoader加载数据集
+dl_train, dl_valid = DataLoader(ds_train, batch_size=8), DataLoader(ds_valid, batch_size=8)
+
+for features, labels in dl_train:
+    print(features, labels)
+    break
+
+# 演示加法运算符（'+'）的合并作用
+
+ds_data = ds_train + ds_valid
+
+print("len(ds_train) = ", len(ds_train))
+print("len(ds_valid) = ", len(ds_valid))
+print("len(ds_train+ds_valid) = ", len(ds_data))
+
+print(type(ds_data))
+
+# 2, 根据图片目录创建图片数据集
+
+import numpy as np
+import torch
+from torch.utils.data import DataLoader
+from torchvision import transforms, datasets
+
+# 演示一些常用的图片增强操作
+
+from PIL import Image
+img = Image.open("./data/cat.jpeg")
+img
+
+# 随机数值翻转
+transforms.RandomVerticalFlip()(img)
+
+# 随机旋转
+transforms.RandomRotation(45)(img)
+
+# 定义图片增强操作
+
+transform_train = transforms.Compose([
+    transforms.RansomHorizontalFlip(), # 随机水平翻转
+    transforms.RandomVerticalFlip(), # 随机垂直翻转
+    transforms.RandomRotation(45), # 随机在45度角度内旋转
+    transforms.ToTensor() # 转换成张量
+])
+
+transform_valid = transforms.Compose([
+    transforms.ToTensor()
+])
+
+# 根据图片目录创建数据集
+ds_train = datasets.ImageFloder("./data/cifar2/train/",
+                                transform=transform_train, target_transform=lambda t:torch.tensor([t]).float())
+ds_valid = datasets.ImageFloder("./data/cifar2/test/",
+                                transform=transform_train, target_transform=lambda t:torch.tensor([t]).float())
+
+print(ds_train.class_to_idx)
+
+# 使用DataLoader加载数据集
+dl_train = DataLoader(ds_train, batch_size=50, shuffle=True, num_workers=3)
+dl_valid = DataLoader(ds_valid, batch_size=50, shuffle=True, num_workers=3)
+
+for features, labels in dl_train:
+    print(features.shape)
+    print(labels.shape)
+    break
+
