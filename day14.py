@@ -164,3 +164,31 @@ for features, labels in dl_train:
     print(labels.shape)
     break
 
+# 3，创建自定义数据集
+# 下面通过继承Dataset类创建imdb文本分类任务的自定义数据集。
+# 大概思路如下：首先，对训练集文本分词构建词典。然后将训练集文本和测试集文本数据转换成token单词编码。
+# 接着将转换成单词编码的训练集数据和测试集数据按样本分割成多个文件，一个文件代表一个样本。
+# 最后，我们可以根据文件名列表获取对应序号的样本内容，从而构建Dataset数据集。
+
+import numpy as np
+import pandas as pd
+from collections import OrderedDict
+import re, string
+
+MAX_WORDS = 10000  # 仅考虑最高频的10000个词
+MAC_LEN= 200 # 每个样本保留200个词的长度
+BATCH_SIZE = 20
+
+train_data_path = 'data/imdb/train.tsv'
+test_Data_path = 'data/imdb/test.tsv'
+train_token_path = 'data/imdb/train_token.tsv'
+test_token_path = 'data/imdb/test_token.tsv'
+train_samples_path = 'data/imdb/train_samples/'
+test_samples_path = 'data/imdb/test_samples/'
+
+# 首先我们构建词典，并保留最高频的MAX_WORDS个词。
+
+## 构建词典
+
+word_count_dict = {}
+
