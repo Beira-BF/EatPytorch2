@@ -180,7 +180,7 @@ MAC_LEN= 200 # 每个样本保留200个词的长度
 BATCH_SIZE = 20
 
 train_data_path = 'data/imdb/train.tsv'
-test_Data_path = 'data/imdb/test.tsv'
+test_data_path = 'data/imdb/test.tsv'
 train_token_path = 'data/imdb/train_token.tsv'
 test_token_path = 'data/imdb/test_token.tsv'
 train_samples_path = 'data/imdb/train_samples/'
@@ -191,4 +191,79 @@ test_samples_path = 'data/imdb/test_samples/'
 ## 构建词典
 
 word_count_dict = {}
+
+# 清洗文本
+def clean_text(text):
+    lowercase = text.lower().replace("\n", " ")
+    stripped_html = re.sub('<br />', ' ', lowercase)
+    cleaned_punctuation = re.sub('[%]'%re.escape(string.punctuation),'', stripped_html)
+    return cleaned_punctuation
+
+with open(train_data_path, "r", encoding='utf-8') as f:
+    for line in f:
+        label, text = line.split("\t")
+        cleaned_text = clean_text(text)
+        for word in cleaned_text.split(" "):
+            word_count_dict[word] = word_count_dict.get(word, 0) + 1
+
+df_word_dict = pd.DataFrame(pd.Series(word_count_dict, name="count"))
+df_word_dict = df_word_dict.sort_values(by = "count", ascending=False)
+
+df_word_dict = df_word_dict[0:MAX_WORDS-2]
+df_word_dict["word_id"] = range(2, MAX_WORDS) # 编号0和1分别留给未知词<unknow>和填充<padding>
+
+word_id_dict = df_word_dict["word_id"].to_dict()
+
+df_word_dict.head(10)
+
+# 然后我们利用构建好的词典，将文本转换成token序号
+
+# 转换token
+
+# 填充文本
+def pad(data_list, pad_length):
+    padded_list = data_list.copy()
+    if len(data_list) > pad_length:
+        padded_list = data_list[-pad_length:]
+    if len(data_list) < pad_length:
+        padded_list = [1]*(pad_length-len(data_list))+data_list
+    return padded_list
+
+def text_to_token(text_file, token_file):
+    with open(text_file, "r", encoding='utf-8') as fin, \
+        open(token_file, "w", encoding='utf-8') as fout:
+        for line in fin:
+            label, text = line.split("\t")
+            cleaned_text = cleaned_text(text)
+            word_token_list = [word_id_dict.get(word, 0) for word in cleaned_text.split(" ")]
+            pad_list = pad(word_token_list, MAC_LEN)
+            out_line = label + "\t" + " ".join([str(x) for x in pad_list])
+            fout.write(out_line + "\n")
+
+text_to_token(train_data_path, train_data_path)
+text_to_token(test_data_path, test_token_path)
+
+# 接着将token文本按照样本分割，每个文件存放一个样本的数据。
+
+# 分割样本
+import os
+
+if not os.path.exists(train_samples_path):
+    os.mkdir(train_samples_path)
+
+if not os.path.exists(test_samples_path):
+    os.mkdir(test_samples_path)
+
+def split_samples(token_path, samples_dir):
+    with open(token_path, "r", encoding='utf-8') as fin:
+        i = 0
+        for line in fin:
+            with open(samples_dir+"%d.txt"%i, "w", encoding="utf-8") as fout:
+                fout.write(line)
+            i = i+1
+
+split_samples(train_token_path, train_samples_path)
+split_samples(test_samples_path, test_samples_path)
+
+print(os.listdir(train_samples_path)[0:100])
 
