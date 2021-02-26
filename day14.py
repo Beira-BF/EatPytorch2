@@ -137,7 +137,7 @@ transforms.RandomRotation(45)(img)
 # 定义图片增强操作
 
 transform_train = transforms.Compose([
-    transforms.RansomHorizontalFlip(), # 随机水平翻转
+    transforms.RandomHorizontalFlip(), # 随机水平翻转
     transforms.RandomVerticalFlip(), # 随机垂直翻转
     transforms.RandomRotation(45), # 随机在45度角度内旋转
     transforms.ToTensor() # 转换成张量
@@ -148,9 +148,9 @@ transform_valid = transforms.Compose([
 ])
 
 # 根据图片目录创建数据集
-ds_train = datasets.ImageFloder("./data/cifar2/train/",
+ds_train = datasets.ImageFolder("./data/cifar2/train/",
                                 transform=transform_train, target_transform=lambda t:torch.tensor([t]).float())
-ds_valid = datasets.ImageFloder("./data/cifar2/test/",
+ds_valid = datasets.ImageFolder("./data/cifar2/test/",
                                 transform=transform_train, target_transform=lambda t:torch.tensor([t]).float())
 
 print(ds_train.class_to_idx)
@@ -196,7 +196,7 @@ word_count_dict = {}
 def clean_text(text):
     lowercase = text.lower().replace("\n", " ")
     stripped_html = re.sub('<br />', ' ', lowercase)
-    cleaned_punctuation = re.sub('[%]'%re.escape(string.punctuation),'', stripped_html)
+    cleaned_punctuation = re.sub('[%s]'%re.escape(string.punctuation),'', stripped_html)
     return cleaned_punctuation
 
 with open(train_data_path, "r", encoding='utf-8') as f:
@@ -234,7 +234,7 @@ def text_to_token(text_file, token_file):
         open(token_file, "w", encoding='utf-8') as fout:
         for line in fin:
             label, text = line.split("\t")
-            cleaned_text = cleaned_text(text)
+            cleaned_text = clean_text(text)
             word_token_list = [word_id_dict.get(word, 0) for word in cleaned_text.split(" ")]
             pad_list = pad(word_token_list, MAC_LEN)
             out_line = label + "\t" + " ".join([str(x) for x in pad_list])
@@ -263,7 +263,139 @@ def split_samples(token_path, samples_dir):
             i = i+1
 
 split_samples(train_token_path, train_samples_path)
-split_samples(test_samples_path, test_samples_path)
+split_samples(test_token_path, test_samples_path)
 
 print(os.listdir(train_samples_path)[0:100])
+
+# 一切准备就绪，我们可以创建数据集Dataset，从文件名称列表中读取文件内容了。
+
+import os
+class imdbDataset(Dataset):
+    def __init__(self, samples_dir):
+        self.samples_dir = samples_dir
+        self.samples_paths = os.listdir(samples_dir)
+
+    def __len__(self):
+        return len(self.samples_paths)
+
+    def __getitem__(self, index):
+        path = self.samples_dir + self.samples_paths[index]
+        with open(path, "r", encoding="utf-8") as f:
+            line = f.readline()
+            label, tokens = line.split("\t")
+            label = torch.tensor([float(label)], dtype=torch.float)
+            feature = torch.tensor([int(x) for x in tokens.split(" ")], dtype=torch.long)
+            return (feature, label)
+
+ds_train = imdbDataset(train_samples_path)
+ds_test = imdbDataset(test_samples_path)
+
+print(len(ds_train))
+print(len(ds_test))
+
+dl_train = DataLoader(ds_train, batch_size=BATCH_SIZE, shuffle=True, num_workers=4)
+dl_test = DataLoader(ds_test, batch_size=BATCH_SIZE, num_workers=4)
+
+for features, labels in dl_train:
+    print(features)
+    print(labels)
+    break
+
+# 最后构建模型测试一下数据集管道是否可用。
+
+import torch
+from torch import nn
+import importlib
+from torchkeras import Model, summary
+
+class Net(Model):
+
+    def __init__(self):
+        super(Net, self).__init__()
+
+        # 设置padding_idx参数后将在训练过程中将填充的token始终赋值为0向量
+        self.embedding = nn.Embedding(num_embeddings=MAX_WORDS, embedding_dim=3, padding_idx=1)
+        self.conv = nn.Sequential()
+        self.conv.add_module("conv_1", nn.Conv1d(in_channels=3, out_channels=16, kernel_size=5))
+        self.conv.add_module("pool_1", nn.MaxPool1d(kernel_size=2))
+        self.conv.add_module("relu_1", nn.ReLU())
+        self.conv.add_module("conv_2", nn.Conv1d(in_channels=16, out_channels=128, kernel_size=2))
+        self.conv.add_module("pool_2", nn.MaxPool1d(kernel_size=2))
+        self.conv.add_module("relu_2", nn.ReLU())
+
+        self.dense = nn.Sequential()
+        self.dense.add_module("flatten", nn.Flatten())
+        self.dense.add_module("linear", nn.Linear(6144,1))
+        self.dense.add_module("sigmoid", nn.Sigmoid())
+
+    def forward(self, x):
+        x = self.embedding(x).transpose(1,2)
+        x = self.conv(x)
+        y = self.dense(x)
+        return y
+
+model = Net()
+print(model)
+
+model.summary(input_shape=(200,), input_dtype=torch.LongTensor)
+
+# 编译模型
+def accuracy(y_pred, y_true):
+    y_pred = torch.where(y_pred>0.5, torch.ones_like(y_pred, dtype=torch.float32),
+                         torch.zeros_like(y_pred, dtype=torch.float32))
+
+    acc = torch.mean(1-torch.abs(y_true-y_pred))
+    return acc
+
+model.compile(loss_func=nn.BCELoss(), optimizer=torch.optim.Adagrad(model.parameters(), lr=0.02),
+              metrics_dict={"accuracy": accuracy})
+
+# 训练模型
+dfhistory = model.fit(10, dl_train, dl_val=dl_test, log_step_freq=200)
+
+# 三、使用DataLoader加载数据集
+# DataLoader能够控制batch的大小，batch中元素的采样方法，以及将batch结果整理成模型所需输入形式的方法，并且能够使用多进程读取数据。
+# DataLoader的函数签名如下。
+
+DataLoader(
+    dataset,
+    batch_size=1,
+    shuffle=False,
+    sampler=None,
+    batch_sampler=None,
+    num_workers=0,
+    collate_fn=None,
+    pin_memory=False,
+    drop_last=False,
+    timeout=0,
+    worker_init_fn=None,
+    multiprocessing_context=None,
+)
+
+# 一般情况下，我们仅仅会配置dataset, batch_size, shuffle, num_workers, drop_last这五个参数，其他参数使用默认即可。
+# DataLoader除了可以加载我们前面讲的torch.utils.data.Dataset外，还能够加载另外一种数据集torch.utils.data.IterableDataset.
+# 和Dataset数据集相当于一种列表结构不同，IterableDataset相当于一种迭代器结构。它更加复杂，一般较少使用。
+# dataset:数据集
+# batch_size:批次大小
+# shuffle：是否乱序
+# sampler: 样本采样函数，一般无需设置。
+# batch_sampler: 批次采样函数，一般无需设置。
+# nun_workers: 使用多进程读取数据，设置的进程数。
+# collate_fn: 整理一个批次数据的函数。
+# pin_memory: 是否设置为锁业内存。默认为False，锁业内存不会使用虚拟内存（硬盘），从锁业内存拷贝到GPU上速度会更快。
+# drop_last: 是否丢弃最后一个样本数量不足batch_size批次数据。
+# timeout: 加载一个数据批次的最长等待实践，一般无需设置。
+# worker_init_fn: 每个worker中dataset的初始化函数，常用于IterableDataset。一般不使用。
+
+# 构建输入数据管道
+ds = TensorDataset(torch.arange(1,50))
+dl = DataLoader(ds,
+                batch_size=10,
+                shuffle=True,
+                num_workers=2,
+                drop_last=True)
+
+# 迭代数据
+for batch, in dl:
+    print(batch)
 
