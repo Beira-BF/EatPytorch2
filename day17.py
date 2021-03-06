@@ -121,7 +121,7 @@ for step, mean in enumerate(range(-10,10,1)):
     writer.flush()
 writer.close()
 
-# 可视化原始图像
+# 四，可视化原始图像
 # 如果我们作图像相关的任务，也可以将原始的图片在tensorboard中进行可视化展示。
 # 如果只写入一张图片信息，可以使用writer.add_image.
 # 如果要写入多张图片信息，可以使用writer.add_images.
@@ -132,5 +132,79 @@ import torch
 import torchvision
 from torch import nn
 from torch.utils.data import Dataset, DataLoader
-from torchvision import transformers, datasets
+from torchvision import transforms, datasets
 
+transform_train = transforms.Compose(
+    [transforms.ToTensor()])
+transform_valid = transforms.Compose(
+    [transforms.ToTensor()])
+
+ds_train = datasets.ImageFolder("./data/cifar2/train/",
+                                transform=transform_train,target_transform=lambda t:torch.tensor([t]).float())
+ds_valid = datasets.ImageFolder("./data/cifar2/test/",
+                                transform=transform_train, target_transform=lambda t:torch.tensor([t]).floaat())
+
+print(ds_train.class_to_idx)
+
+dl_train = DataLoader(ds_train, batch_size=50, shuffle=True, num_workers=3)
+dl_valid = DataLoader(ds_valid, batch_size=50, shuffle=True, num_workers=3)
+
+dl_train_iter = iter(dl_train)
+images, labels = dl_train_iter.next()
+
+# 仅查看一张图片
+writer = SummaryWriter("./data/tensorboard")
+writer.add_image('images[0]', images[0])
+writer.close()
+
+# 将多张图片拼接成一张图片，中间用黑色网格分割
+writer = SummaryWriter('./data/tensorboard')
+# create grid of images
+img_grid = torchvision.utils.make_grid(images)
+writer.add_image('image_grid', img_grid)
+writer.close()
+
+# 将多张图片直接写入
+writer = SummaryWriter('./data/tensorboard')
+writer.add_images("images", images, global_step=0)
+writer.close()
+
+# 五，可视化人工绘图
+# 如果我们将matplotlib绘图的结果在tensorboard中蘸水，可以使用add_figure.
+# 注意，和writer.add_image不同的是，writer.add_figure需要传入matplotlib的figure对象。
+
+import torch
+import torchvision
+from torch import nn
+from torch.utils.data import Dataset, DataLoader
+from torchvision import transforms, datasets
+
+transform_train = transforms.Compose(
+    [transforms.ToTensor()]
+)
+transform_valid = transforms.Compose(
+    [transforms.ToTensor()]
+)
+
+ds_train = datasets.ImageFolder("./data/cifar2/train/",
+                                transform=transform_train, target_transform=lambda t:torch.tensor([t]).float())
+ds_valid = datasets.ImageFolder("./data/cifar2/test/",
+                                transform=transform_train, target_transform=lambda t:torch.tensor([t]).float())
+
+print(ds_train.class_to_idx)
+
+from matplotlib import pyplot as plt
+figure = plt.figure(figsize=(8,8))
+for i in range(9):
+    img, label = ds_train[i]
+    img = img.permute(1,2,0)
+    ax = plt.subplot(3,3,i+1)
+    ax.imshow(img.numpy())
+    ax.set_title("label = %d"%label.item())
+    ax.set_xticks([])
+    ax.set_yticks([])
+plt.show()
+
+writer = SummaryWriter('./data/tensorboard')
+writer.add_figure('figure', figure, global_step=0)
+writer.close()
