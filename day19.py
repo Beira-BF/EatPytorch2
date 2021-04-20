@@ -167,3 +167,227 @@ print(net)
 
 summary(net,input_shape=(1,32,32))
 
+import datetime
+import numpy as np
+import pandas as pd
+from sklearn.metrics import accuracy_score
+
+def accuracy(y_pred, y_true):
+    y_pred_cls = torch.argmax(nn.Softmax(dim=1)(y_pred),dim=1).data
+    return accuracy_score(y_true, y_pred_cls)
+
+
+model = net
+model.optimizer = torch.optim.SGD(model.parameters(), lr=0.01)
+model.loss_func = nn.CrossEntropyLoss()
+model.metric_func = accuracy
+model.metric_name = "accuracy"
+
+def train_step(model, features, labels):
+
+    # 训练模式，dropout层发生作用
+    model.train()
+
+    # 梯度清零
+    model.optimizer.zero_grad()
+
+    # 正向传播求损失
+    predictions = model(features)
+    loss = model.loss_func(predictions, labels)
+    metric = model.metric_func(predictions, labels)
+
+    # 反向传播求梯度
+    loss.backward()
+    model.optimizer.step()
+
+    return loss.item(), metric.item()
+
+
+@torch.no_grad()
+def valid_step(model, features, labels):
+
+    # 预测模式，dropout层不发生作用
+    model.eval()
+
+    predictions = model(features)
+    loss = model.loss_func(predictions, labels)
+    metric = model.metric_func(predictions, labels)
+
+    return loss.item(), metric.item()
+
+
+
+# 测试train_step效果
+features, labels = next(iter(dl_train))
+train_step(model, features, labels)
+
+
+
+def train_model(model, epochs, dl_Train, dl_valid, log_step_freq):
+
+    metric_name = model.metric_name
+    dfhistory = pd.DataFrame(columns=["epoch", "loss", metric_name, "val_loss", "val_"+metric_name])
+    print("Start Training...")
+    nowtime = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    print("=========="*8 + "%s"%nowtime)
+
+    for epoch in range(1, epochs+1):
+
+        # 1, 训练循环--------------------------------------
+        loss_sum = 0.0
+        metric_sum = 0.0
+        step = 1
+
+        for step, (features, labels) in enumerate(dl_train, 1):
+
+            loss, metric = train_step(model, features, labels)
+
+            # 打印batch级别日志
+            loss_sum += loss
+            metric_sum += metric
+            if step%log_step_freq == 0:
+                print(("[step = %d] loss: %.3f, "+metric_name+": %.3f") %
+                (step, loss_sum/step, metric_sum/step))
+
+
+        # 2，验证循环-----------------------------------------
+        val_loss_sum = 0.0
+        val_metric_sum = 0.0
+        val_step = 1
+
+        for val_step, (features, labels) in enumerate(dl_valid, 1):
+
+            val_loss, val_metric = valid_step(model, features, labels)
+
+            val_loss_sum += val_loss
+            val_metric_sum += val_metric
+
+
+        # 3, 记录日志-----------------------------------------
+        info = (epoch, loss_sum/step, metric_sum/step,
+                val_loss_sum/val_step, val_metric_sum/val_step)
+        dfhistory.loc[epoch-1] = info
+
+
+        # 打印epoch级别日志
+        print(("\nEPOCH = %d, loss = %.3f," +metric_name+ \
+               " = %.3f, val_loss = %.3f, "+"val_"+metric_name+" = %.3f")%info)
+        nowtime = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        print("\n"+"=========="*8 + "%s"%nowtime)
+
+    print("Finished Training...")
+    return dfhistory
+
+
+epochs = 3
+dfhistory = train_model(model, epochs, dl_train, dl_valid, log_step_freq=100)
+
+
+# 三， 类风格torchkeras.Model
+# 此处试用torchkeras.Model构建模型，并调用compile方法和fit方法训练模型。
+# 使用该形式训练模型非常简洁明了。
+
+import torchkeras
+
+class CnnModel(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.layers = nn.ModuleList([
+            nn.Conv2d(in_channels=1, out_channels=32, kernel_size=3),
+            nn.MaxPool2d(kernel_size=2, stride=2),
+            nn.Conv2d(in_channels=32, out_channels=64, kernel_size=5),
+            nn.MaxPool2d(kernel_size=2, stride=2),
+            nn.Dropout2d(p=0.1),
+            nn.AdaptiveMaxPool2d((1,1)),
+            nn.Flatten(),
+            nn.Linear(64, 32),
+            nn.ReLU(),
+            nn.Linear(32, 10)
+        ])
+    def forward(self, x):
+        for layer in self.layers:
+            x = layer(x)
+        return x
+
+model = torchkeras.Model(CnnModel())
+
+print(model)
+
+model.summary(input_shape=(1,32,32))
+
+from sklearn.metrics import accuracy_score
+
+def accuracy(y_pred, y_true):
+    y_pred_cls = torch.argmax(nn.Softmax(dim=1)(y_pred), dim=1).data
+    return accuracy_score(y_true.numpy(), y_pred_cls.numpy())
+
+model.compile(loss_func=nn.CrossEntropyLoss(),
+              optimizer=torch.optim.Adam(model.parameters(), lr=0.02),
+              metrics_dict={"accuracy":accuracy})
+
+
+dfhistory = model.fit(3, dl_train=dl_train, dl_val=dl_valid, log_step_freq=100)
+
+# 四，类风格torchkeras.LightModel
+# 下面示范torchkeras.LightModel的使用范例，详细用法可以参照
+import torchkeras
+import pytorch_lightning as pl
+
+class CnnNet(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.layers = nn.ModuleList([
+            nn.Conv2d(in_channels=1, out_channels=32, kernel_size=3),
+            nn.MaxPool2d(kernel_size=2, stride=2),
+            nn.Conv2d(in_channels=32, out_channels=64, kernel_size=5),
+            nn.MaxPool2d(kernel_size=2, stride=2),
+            nn.Dropout2d(p=0.1),
+            nn.AdaptiveMaxPool2d((1,1)),
+            nn.Flatten(),
+            nn.Linear(64,32),
+            nn.ReLU(),
+            nn.Linear(32,10)
+        ])
+
+    def forward(self, x):
+        for layer in self.layers:
+            x = layer(x)
+        return x
+
+class Model(torchkeras.LightModel):
+
+    # loss, and optioanl metrics
+    def shared_step(self, batch)->dict:
+        x, y = batch
+        prediction = self(x)
+        loss = nn.CrossEntropyLoss()(prediction,y)
+        preds = torch.argmax(nn.Softmax(dim=1)(prediction), dim=1).data
+        acc = pl.metrics.functional.accuracy(preds, y)
+        dic = {"loss":loss, "acc":acc}
+        return dic
+
+    # optimizer, add optional lr_scheduler
+    def configure_optimizers(self):
+        optimizer = torch.optim.Adam(self.parameters(), lr=1e-2)
+        lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.00001)
+        return {"optimizer":optimizer, "lr_scheduler":lr_scheduler}
+
+pl.seed_everything(1234)
+net = CnnNet()
+model = Model(net)
+
+torchkeras.summary(model, input_shape=(1,32,32))
+print(model)
+
+ckpt_cb = pl.callbacks.ModelCheckpoint(monitor='val_loss')
+
+# set gpus=0 will use cpu,
+# set gpus=1 will use 1 gpu
+# set gpus=2 will use 2 gpus
+# set gpus=-1 will use all gpus
+# you can also set gpus=[0,1] to use the given gpus
+# you can even set tpu_cores=2 to use two tpus
+
+trainer = pl.Trainer(max_epochs=10, gpus=0, callbacks=[ckpt_cb])
+trainer.fit(model, dl_train, dl_valid)
+
