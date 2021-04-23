@@ -344,3 +344,251 @@ model_clone.compile(loss_func=nn.CrossEntropyLoss(),
 
 model_clone.evaluate(dl_valid)
 
+# 四，torchkeras.Model使用多GPU范例
+# 注：以下范例需要在有多个GPU的机器上跑。如果在单GPU的机器上跑，也能跑通，但是实际上使用的单个GPU。
+# 1，准备数据
+
+import torch
+from torch import nn
+
+import torchvision
+from torchvision import transforms
+
+import torchkeras
+
+transform = transforms.Compose([transforms.ToTensor()])
+ds_train = torchvision.datasets.MNIST(root="./data/minist/", train=True, download=True, transform=transform)
+ds_valid = torchvision.datasets.MNIST(root="./data/minist/", train=False, download=True, transform=transform)
+
+dl_train = torch.utils.data.DataLoader(ds_train, batch_size=128, shuffle=True, num_workers=4)
+dl_valid = torch.utils.data.DataLoader(ds_valid, batch_size=128, shuffle=False, num_workers=4)
+
+print(len(ds_train))
+print(len(ds_valid))
+
+
+# 2,定义模型
+
+class CnnModule(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.layers = nn.ModuleList([
+            nn.Conv2d(in_channels=1, out_channels=32, kernel_size=3),
+            nn.MaxPool2d(kernel_size=2, stride=2),
+            nn.Conv2d(in_channels=32, out_channels=64, kernel_size=5),
+            nn.MaxPool2d(kernel_size=2, stride=2),
+            nn.Dropout2d(p=0.1),
+            nn.AdaptiveMaxPool2d((1,1)),
+            nn.Flatten(),
+            nn.Linear(64,32),
+            nn.ReLU(),
+            nn.Linear(32,10)
+        ])
+    def forward(self, x):
+        for layer in self.layers:
+            x = layer(x)
+        return x
+
+net = nn.DataParallel(CnnModel())  # Attention this line!!!
+model = torchkeras.Model(net)
+
+model.summary(input_shape=(1,32,32))
+
+# 3, 训练模型
+
+from sklearn.metrics import accuracy_score
+
+def accuracy(y_pred, y_true):
+    y_pred_cls = torch.argmax(nn.Softmax(dim=1)(y_pred),dim=1).data
+    return accuracy_score(y_true.cpu().numpy(),y_pred_cls.cpu().numpy())
+    # 注意此处要将数据先移动到cpu上，然后才能转换成numpy数组
+
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+model.compile(loss_func=nn.CrossEntropyLoss(),
+              optimizer=torch.optim.Adam(model.parameters(), lr=0.02),
+              metrics_dict={"accuracy":accuracy}, device=device) # 注意此处compile时制定了device
+
+dfhistory = model.fit(3, dl_train=dl_train, dl_val=dl_valid, log_step_freq=100)
+
+# 4, 评估模型
+
+import matplotlib.pyplot as plt
+
+def plot_metric(dfhistory, metric):
+    train_metrics = dfhistory[metric]
+    val_metrics = dfhistory['val_'+metric]
+    epochs = range(1, len(train_metrics)+1)
+    plt.plot(epochs, train_metrics, 'bo--')
+    plt.plot(epochs, val_metrics, 'ro-')
+    plt.title("Training and validation "+metric)
+    plt.xlabel("Epochs")
+    plt.ylabel(metric)
+    plt.legend(["train_"+metric, 'val_'+metric])
+    plt.show()
+
+plot_metric(dfhistory, "loss")
+
+plot_metric(dfhistory, "accuracy")
+
+model.evaluate(dl_valid)
+
+
+# 5, 使用模型
+
+model.predict(dl_valid)[0:10]
+
+
+# 6, 保存模型
+
+# save the model parameters
+
+torch.save(model.net.module.state_dict(), "model_parameter.pkl")
+
+net_clone = CnnModel()
+net_clone.load_state_dict(torch.load("model_parameter.pkl"))
+
+model_clone = torchkeras.Model(net_clone)
+model_clone.compile(loss_func=nn.CrossEntropyLoss(),
+                    optimizer=torch.optim.Adam(model.parameters(), lr=0.02),
+                    metrics_dict={"accuracy":accuracy}, device=device)
+model_clone.evaluate(dl_valid)
+
+# 五，torchkeras.LightModel使用GPU/TPU范例
+# 使用torchkeras.LightModel可以非常容易地将训练模式从cpu切换到单个gpu，多个gpu乃至多个tpu。
+# 1，准备数据
+
+import torch
+from torch import nn
+
+import torchvision
+from torchvision import transforms
+
+import torchkeras
+
+transform = transforms.Compose([transforms.ToTensor()])
+
+ds_train = torchvision.datasets.MNIST(root="./data/minist/", train=True, download=True, transform=transform)
+ds_valid = torchvision.datasets.MNIST(root="./data/minist/", train=False, download=True, transform=transform)
+
+dl_train = torch.utils.data.DataLoader(ds_train, batch_size=128, shuffle=True, num_workers=4)
+dl_valid = torch.utils.data.DataLoader(ds_valid, batch_size=128, shuffle=False, num_workers=4)
+
+print(len(ds_train))
+print(len(ds_valid))
+
+# 2, 定义模型
+
+import torchkeras
+import pytorch_lightning as pl
+
+class CnnNet(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.layers = nn.ModuleList([
+            nn.Conv2d(in_channels=1, out_channels=32, kernel_size=3),
+            nn.MaxPool2d(kernel_size=2, stride=2),
+            nn.Conv2d(in_channels=32, out_channels=64, kernel_size=5),
+            nn.MaxPool2d(kernel_size=2, stride=2),
+            nn.Dropout2d(p=0.1),
+            nn.AdaptiveMaxPool2d((1,1)),
+            nn.Flatten(),
+            nn.Linear(64,32),
+            nn.ReLU(),
+            nn.Linear(32,10)
+        ])
+
+    def forward(self, x):
+        for layer in self.layers:
+            x = layer(x)
+        return x
+
+class Model(torchkeras.LightModel):
+
+    # loss, and optional metrics
+    def shared_step(self, batch)->dict:
+        x,y = batch
+        prediction = self(x)
+        loss = nn.CrossEntropyLoss()(prediction,y)
+        preds = torch.argmax(nn.Softmax(dim=1)(prediction), dim=1).data
+        acc = pl.metrics.functional.accuracy(preds,y)
+        dic = {"loss":loss, "acc":acc}
+        return dic
+
+    # optimizer, and optional lr_scheduler
+    def configure_optimizers(self):
+        optimizer = torch.optim.Adam(self.parameters(), lr=1e-2)
+        lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.0001)
+        return {"optimizer": optimizer, "lr_scheduler":lr_scheduler}
+
+
+pl.seed_everything(1234)
+net = CnnNet()
+model = Model(net)
+
+# 3, 训练模型
+ckpt_cb = pl.callbacks.ModelCheckpoint(monitor='val_loss')
+
+# set gpus=0 will use cpu,
+# set gpus=1 will use 1 gpu
+# set gpus=2 will use 2 gpus
+# set gpus=-1 will use all gpus
+# you can also set gpus=[0,1] to use the given gpus
+# you can even set tpu_cores=2 to use two tpus
+
+trainer = pl.Trainer(max_epochs=10, gpus=2, callbacks=[ckpt_cb])
+
+trainer.fit(model. dl_train, dl_valid)
+
+# 4, 评估模型
+import pandas as pd
+
+history = model.history
+dfhistory = pd.DataFrame(history)
+
+
+import matplotlib.pyplot as plt
+
+def plot_metric(dfhistory, metric):
+    train_metrics = dfhistory[metric]
+    val_metrics = dfhistory['val_'+metric]
+    epochs = range(1, len(train_metrics)+1)
+    plt.plot(epochs, train_metrics, 'bo--')
+    plt.plot(epochs, val_metrics, 'ro-')
+    plt.title('Training and validation '+metric)
+    plt.xlabel("Epochs")
+    plt.ylabel(metric)
+    plt.legend(["train_"+metric, 'val_'+metric])
+    plt.show()
+
+plot_metric(dfhistory, "loss")
+
+plot_metric(dfhistory, "acc")
+
+results = trainer.test(model, test_dataloaders=dl_valid, verbose=False)
+print(results[0])
+
+# 5, 使用模型
+
+def predict(model, dl):
+    model.eval()
+    preds = torch.cat([model.forward(t[0].to(model.device)) for t in dl])
+
+    result = torch.argmax(nn.Softmax(dim=1)(preds), dim=1).data
+    return(result.data)
+
+result = predict(model, dl_valid)
+
+# 6, 保存模型
+print(ckpt_cb.best_model_score)
+model.load_from_checkpoint(ckpt_cb.best_model_path)
+
+best_net = model.net
+torch.save(best_net.state_dict(), "./data/net.pt")
+
+net_clone = CnnNet()
+net_clone.load_state_dict(torch.load("./data/net.pt"))
+model_clone = Model(net_clone)
+trainer = pl.Trainer()
+result = trainer.test(model_clone, test_dataloaders=dl_valid, verbose=False)
+
+print(result)
